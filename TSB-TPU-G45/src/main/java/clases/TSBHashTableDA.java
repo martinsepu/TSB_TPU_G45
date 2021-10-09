@@ -47,8 +47,12 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
                     this.rehash();
                     clave = h(key);
                 }
-                for(int i=0;i<table.length;i++)
-                    if (this.table[(clave + i*i)%table.length]==null)this.table[(clave + i*i)%table.length]=entrada;
+                for(int i=0;i<table.length;i++) {
+                    Entry actual = this.table[(clave + i * i) % table.length];
+                    if (actual != null && actual.isBorrado()) this.table[(clave + i*i)%table.length]= entrada;
+                    if (actual == null)this.table[(clave + i * i) % table.length] = entrada;
+                }
+
                 cantida++;
             }
         }
