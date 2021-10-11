@@ -10,6 +10,9 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
     private int capacidad_inicial;
     private int modificaciones;
 
+    private transient Set<K> keySet = null;
+    private transient Set<Map.Entry<K,V>> entrySet = null;
+    private transient Collection<V> values = null;
 
     public TSBHashTableDA(){this(11,0.8f);}
 
@@ -32,13 +35,18 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
     @Override
     public int size() {return cantidad;}
 
+    @Override
+    public void clear() {
+        table = new Entry[capacidad_inicial];
+        cantidad = 0;
+    }
+
     public boolean isEmpty(){
         if (cantidad==0)return true;
         return false;
     }
 
     public V put(K key,V value) {
-
         if (key == null || value == null) throw new NullPointerException("put(): parámetro null");
 
         int clave = h(key);
@@ -112,11 +120,13 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
         modificaciones++;
     }
 
-    public boolean contains(Object value){
+    @Override
+    public boolean containsValue(Object value) {
         if(value == null) return false;
-
-
-        return true;
+        for(int i = 0; i < table.length; i++){
+            if(table[i] != null && !table[i].isBorrado() && table[i].getValue() == value) return true;
+        }
+        return false;
     }
 
     public boolean containsKey (Object key){
@@ -138,6 +148,21 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
         return !noEncontre;
     }
 
+
+    public V get(Object key) {
+        int clave = h((K) key);
+        int i = 0;
+        V ans = null;
+        while(table[(clave+i*i) % table.length] != null){
+            if(table[(clave+i*i) % table.length].getKey() == key){
+                ans = table[(clave+i*i) % table.length].getValue();
+                break;
+            }
+            i++;
+        }
+        return ans;
+    }
+
     public V remove(Object key){
         if(key == null) throw new NullPointerException("remove(): parámetro null");
 
@@ -155,10 +180,6 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
         return null;
     }
 
-    @Override
-    public Set<AbstractMap.Entry<K, V>> entrySet() {
-        return null;
-    }
 
     public Object clone(){
         return null;
@@ -236,6 +257,30 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
         }
     }
 
+    @Override
+    public Set<K> keySet() {
+        if(keySet == null){
+            keySet = new KeySet();
+        }
+        return keySet;
+    }
+
+    @Override
+    public Collection<V> values() {
+        if(values == null){
+            values = new ValueCollection();
+        }
+        return values;
+    }
+
+    @Override
+    public Set<Map.Entry<K, V>> entrySet() {
+        if(entrySet == null){
+            entrySet = new EntrySet();
+        }
+        return entrySet;
+    }
+
     private class KeySet extends AbstractSet<K>{
 
         @Override
@@ -248,22 +293,120 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
             return TSBHashTableDA.this.cantidad;
         }
 
+        @Override
+        public boolean contains(Object o) {
+            return TSBHashTableDA.this.containsKey(o);
+        }
+
         private class KeySetIterator implements Iterator<K>{
-
-
+            private int cont, current;
+            public KeySetIterator(){
+                cont = 0;
+                current = 0;
+            }
             @Override
             public boolean hasNext() {
-                return false;
+                return (cont < size());
             }
 
             @Override
             public K next() {
-                return null;
+                if(!hasNext())
+                {
+                    throw new NoSuchElementException("next(): no existe el elemento pedido...");
+                }
+                Entry<K,V> t[] = TSBHashTableDA.this.table;
+                while(t[current] == null || t[current].isBorrado()) current++;
+                K ans = t[current].getKey();
+                current++;
+                cont++;
+                return ans;
+            }
+
+        }
+    }
+    class ValueCollection extends AbstractCollection<V>{
+
+        @Override
+        public Iterator iterator() {
+            return new ValueCollectionIterator();
+        }
+
+        @Override
+        public int size() {
+            return TSBHashTableDA.this.size();
+        }
+
+        @Override
+        public boolean contains(Object o) {
+            return TSBHashTableDA.this.containsValue(o);
+        }
+
+        @Override
+        public void clear() {
+            TSBHashTableDA.this.clear();
+        }
+
+        private class ValueCollectionIterator implements Iterator<V>{
+            private int current, cont;
+            public ValueCollectionIterator(){
+                current = 0;
+                cont = 0;
+            }
+            @Override
+            public boolean hasNext() {
+                return (cont < TSBHashTableDA.this.size());
             }
 
             @Override
-            public void remove() {
-                Iterator.super.remove();
+            public V next() {
+                if(!hasNext())
+                {
+                    throw new NoSuchElementException("next(): no existe el elemento pedido...");
+                }
+                Entry<K,V> t[] = TSBHashTableDA.this.table;
+                while(t[current] == null || t[current].isBorrado()) current++;
+                V ans = t[current].getValue();
+                current++;
+                cont++;
+                return ans;
+            }
+        }
+    }
+    private class EntrySet extends AbstractSet<Map.Entry<K,V>>{
+
+        @Override
+        public Iterator<Map.Entry<K, V>> iterator() {
+            return new EntrySetIterator();
+        }
+
+        @Override
+        public int size() {
+            return TSBHashTableDA.this.size();
+        }
+        private class EntrySetIterator implements Iterator<Map.Entry<K,V>>{
+            private int current, cont;
+            public EntrySetIterator(){
+                current = 0;
+                cont = 0;
+            }
+            @Override
+            public boolean hasNext() {
+                return (cont < TSBHashTableDA.this.size());
+            }
+
+            @Override
+            public Entry<K,V> next() {
+                if(!hasNext())
+                {
+                    throw new NoSuchElementException("next(): no existe el elemento pedido...");
+                }
+                Entry<K,V> t[] = TSBHashTableDA.this.table;
+                while(t[current] == null || t[current].isBorrado()) current++;
+                Entry<K,V> ans = t[current];
+                current++;
+                cont++;
+                return ans;
             }
         }
     }
