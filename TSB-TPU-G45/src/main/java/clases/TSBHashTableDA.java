@@ -35,10 +35,16 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
     @Override
     public int size() {return cantidad;}
 
+    public int hashCode(){
+        int hc= (this.cantidad+super.hashCode())%table.length;
+        return hc;
+    }
+
     @Override
     public void clear() {
         table = new Entry[capacidad_inicial];
         cantidad = 0;
+        this.modificaciones++;
     }
 
     public boolean isEmpty(){
@@ -88,12 +94,19 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
             do {
                 actual=this.table[(clave + i * i) % table.length];
                 if(actual.getKey() == key){
-                    this.table[(clave + i * i) % table.length] = entrada;
+                    this.table[(clave + i * i) % table.length].setValue(value);
                     encontre=true;
                 }
                 i++;
             }while (!encontre);
             return (V) actual.getValue();
+        }
+    }
+
+
+    public void putall(AbstractMap<? extends K, ? extends V> m){
+        for (Map.Entry<? extends  K, ? extends V> e : m.entrySet()){
+            put(e.getKey(),e.getValue());
         }
     }
 
@@ -156,7 +169,7 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
         while(table[(clave+i*i) % table.length] != null){
             if(table[(clave+i*i) % table.length].getKey() == key){
                 ans = table[(clave+i*i) % table.length].getValue();
-                break;
+                return ans;
             }
             i++;
         }
@@ -170,9 +183,13 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
         Entry actual=null;
         do{
             actual = this.table[(clave + i * i) % table.length];
-            if (actual==null)return null;
+            if (actual==null){
+                return null;
+            }
             if(actual.getKey()==key){
                 this.table[(clave + i * i) % table.length].borrar();
+                cantidad--;
+                modificaciones++;
                 return (V) actual.getValue();
             }
             i++;
@@ -181,8 +198,35 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
     }
 
 
-    public Object clone(){
-        return null;
+    public Object clone() throws CloneNotSupportedException{
+        TSBHashTableDA<K,V> t = (TSBHashTableDA<K, V>) super.clone();
+        t.table = new Entry[table.length];
+        for(int i=0;i<table.length;i++){
+            t.table[i]=this.table[i];
+        }
+        t.keySet=null;
+        t.entrySet = null;
+        t.values=null;
+        t.modificaciones=0;
+        return t;
+    }
+
+    public boolean equals(Object obj){
+        if(!(obj instanceof Map)) return false;
+
+        Map<K, V> t = (Map<K, V>) obj;
+        boolean iguales =true;
+        if(t.size() != this.size())return false;
+
+        Iterator<Map.Entry<K,V>> i = this.entrySet().iterator();
+        Iterator<Map.Entry<K,V>> tem = t.entrySet().iterator();
+        while (i.hasNext() && tem.hasNext()){
+            Map.Entry<K, V> e = i.next();
+            Map.Entry<K,V> s = tem.next();
+            if(!e.equals(s)) return false;
+        }
+        if (i.hasNext()!=tem.hasNext())return false;
+        return true;
     }
 
     /**
@@ -281,6 +325,9 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
         return entrySet;
     }
 
+
+
+
     private class KeySet extends AbstractSet<K>{
 
         @Override
@@ -298,11 +345,15 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
             return TSBHashTableDA.this.containsKey(o);
         }
 
+        public boolean remove(Object o){ return (TSBHashTableDA.this.remove(o)!=null);}
+
+
         private class KeySetIterator implements Iterator<K>{
-            private int cont, current;
+            private int cont, current, expected_modCount;
             public KeySetIterator(){
                 cont = 0;
-                current = 0;
+                current = -1;
+                expected_modCount= TSBHashTableDA.this.modificaciones;
             }
             @Override
             public boolean hasNext() {
@@ -311,10 +362,16 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
 
             @Override
             public K next() {
+                if(TSBHashTableDA.this.modificaciones != expected_modCount)
+                {
+                    throw new ConcurrentModificationException("next(): modificación inesperada de tabla...");
+                }
+
                 if(!hasNext())
                 {
                     throw new NoSuchElementException("next(): no existe el elemento pedido...");
                 }
+
                 Entry<K,V> t[] = TSBHashTableDA.this.table;
                 while(t[current] == null || t[current].isBorrado()) current++;
                 K ans = t[current].getKey();
@@ -325,7 +382,7 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
 
         }
     }
-    class ValueCollection extends AbstractCollection<V>{
+    private class ValueCollection extends AbstractCollection<V>{
 
         @Override
         public Iterator iterator() {
@@ -393,6 +450,12 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
             @Override
             public boolean hasNext() {
                 return (cont < TSBHashTableDA.this.size());
+            }
+
+            public boolean contains(Object o){
+                Entry entrada= (Entry) o;
+                K clave = (K)entrada.getKey();
+                return TSBHashTableDA.this.containsKey(clave);
             }
 
             @Override
