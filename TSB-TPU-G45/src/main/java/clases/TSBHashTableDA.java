@@ -9,6 +9,7 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
     private float load_factor;
     private int capacidad_inicial;
     private int modificaciones;
+    private int codigoHash;
 
     private transient Set<K> keySet = null;
     private transient Set<Map.Entry<K,V>> entrySet = null;
@@ -30,14 +31,18 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
         this.capacidad_inicial=capacidad;
         this.load_factor=load_factor;
         modificaciones=0;
+        codigoHash=0;
     }
 
     @Override
     public int size() {return cantidad;}
 
     public int hashCode(){
-        int hc= (this.cantidad+super.hashCode())%table.length;
-        return hc;
+        //int hc = super.hashCode();
+        //int hc= (this.cantidad+super.hashCode())%table.length;
+        //int hash = 7;
+        //hash = 61 * hash + Objects.hashCode(this.table);
+        return codigoHash;
     }
 
     @Override
@@ -68,6 +73,7 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
                 return (put(key,value));
             }
             this.table[clave] = entrada;
+            codigoHash=codigoHash+entrada.hashCode();
             cantidad++;
             modificaciones++;
             return null;
@@ -83,6 +89,7 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
                 if(actual==null || actual.isBorrado()) {
                     this.table[(clave + i * i) % table.length] = entrada;
                     encontre=true;
+                    codigoHash=codigoHash+entrada.hashCode();
                 }
                 i++;
             }while (!encontre);
@@ -94,12 +101,15 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
             do {
                 actual=this.table[(clave + i * i) % table.length];
                 if(actual.getKey() == key){
+                    codigoHash=codigoHash-this.table[(clave + i * i) % table.length].hashCode();
+                    valorprevio=(V) actual.getValue();
                     this.table[(clave + i * i) % table.length].setValue(value);
                     encontre=true;
+                    codigoHash=codigoHash+this.table[(clave + i * i) % table.length].hashCode();
                 }
                 i++;
             }while (!encontre);
-            return (V) actual.getValue();
+            return valorprevio;
         }
     }
 
@@ -188,6 +198,7 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
             }
             if(actual.getKey()==key){
                 this.table[(clave + i * i) % table.length].borrar();
+                codigoHash=codigoHash-this.table[(clave + i * i) % table.length].hashCode();
                 cantidad--;
                 modificaciones++;
                 return (V) actual.getValue();
@@ -198,17 +209,24 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
     }
 
 
-    public Object clone() throws CloneNotSupportedException{
-        TSBHashTableDA<K,V> t = (TSBHashTableDA<K, V>) super.clone();
-        t.table = new Entry[table.length];
-        for(int i=0;i<table.length;i++){
-            t.table[i]=this.table[i];
+    public Object clone(){
+        TSBHashTableDA<K, V> t;
+        try {
+            t = (TSBHashTableDA<K, V>) super.clone();
+            t.table = new Entry[table.length];
+            for (int i = 0; i < table.length; i++) {
+                t.table[i] = this.table[i];
+            }
+            t.keySet = null;
+            t.entrySet = null;
+            t.values = null;
+            t.modificaciones = 0;
+            return t;
         }
-        t.keySet=null;
-        t.entrySet = null;
-        t.values=null;
-        t.modificaciones=0;
-        return t;
+        catch (CloneNotSupportedException e) {
+            return null;
+        }
+
     }
 
     public boolean equals(Object obj){
@@ -352,7 +370,7 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
             private int cont, current, expected_modCount;
             public KeySetIterator(){
                 cont = 0;
-                current = -1;
+                current = 0;
                 expected_modCount= TSBHashTableDA.this.modificaciones;
             }
             @Override
