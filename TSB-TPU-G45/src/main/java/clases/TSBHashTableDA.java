@@ -58,59 +58,24 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
     }
 
     public V put(K key,V value) {
-        if (key == null || value == null) throw new NullPointerException("put(): parámetro null");
-
-        int clave = h(key);
-        int i = 0;
-        V valorprevio = null;
-        boolean encontre=false;
-        Entry actual = null;
-        Entry<K, V> entrada = new Entry<K, V>(key, value);
-
-        if (table[clave] == null) {
-            if(cantidad>=this.load_factor*this.table.length){
-                this.rehash();
-                return (put(key,value));
+        if(key == null || value == null) throw new NullPointerException("put(): parámetro null");
+        int id = h(key);
+        int sum = 0;
+        V old = null;
+        while(table[(id + sum*sum)% table.length] != null){
+            if(table[(id + sum*sum)% table.length].getKey() == key){
+                old = table[(id + sum*sum)% table.length].getValue();
+                codigoHash -= table[(id + sum*sum)% table.length].hashCode();
+                cantidad--;
+                break;
             }
-            this.table[clave] = entrada;
-            codigoHash=codigoHash+entrada.hashCode();
-            cantidad++;
-            modificaciones++;
-            return null;
+            sum++;
         }
-
-        if(!containsKey(key)){
-            if(cantidad>=this.load_factor*this.table.length) {
-                this.rehash();
-                clave=h(key);
-            }
-            do {
-                actual = this.table[(clave + i * i) % table.length];
-                if(actual==null || actual.isBorrado()) {
-                    this.table[(clave + i * i) % table.length] = entrada;
-                    encontre=true;
-                    codigoHash=codigoHash+entrada.hashCode();
-                }
-                i++;
-            }while (!encontre);
-            cantidad++;
-            modificaciones++;
-            return valorprevio;
-        }
-        else {
-            do {
-                actual=this.table[(clave + i * i) % table.length];
-                if(actual.getKey() == key){
-                    codigoHash=codigoHash-this.table[(clave + i * i) % table.length].hashCode();
-                    valorprevio=(V) actual.getValue();
-                    this.table[(clave + i * i) % table.length].setValue(value);
-                    encontre=true;
-                    codigoHash=codigoHash+this.table[(clave + i * i) % table.length].hashCode();
-                }
-                i++;
-            }while (!encontre);
-            return valorprevio;
-        }
+        cantidad++;
+        table[(id + sum*sum)% table.length] = new Entry<>(key, value);
+        codigoHash += table[(id + sum*sum)% table.length].hashCode();
+        if(cantidad > load_factor * table.length) rehash();
+        return old;
     }
 
 
@@ -122,6 +87,7 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
 
     protected void rehash(){
         int longitud_previa=this.table.length;
+        int cantidad_previa = this.size();
         int longitud_nueva= longitud_previa *2 +1;
 
         if(longitud_nueva > TSBHashTableDA.MAX_SIZE)
@@ -140,6 +106,7 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
                 }
             }
         }
+        cantidad = cantidad_previa;
         modificaciones++;
     }
 
@@ -260,6 +227,15 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
         return k %t;
     }
 
+    @Override
+    public String toString() {
+        StringBuilder s = new StringBuilder("{");
+        for(Map.Entry<K, V> e : this.entrySet()){
+            s.append(e + ", ");
+        }
+        s.append("}");
+        return s.toString();
+    }
 
     private class Entry<K,V> implements AbstractMap.Entry<K,V>{
         private K key;
@@ -316,6 +292,11 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
         }
         public void borrar(){
             this.borrado=true;
+        }
+
+        @Override
+        public String toString() {
+            return key + ": " + value;
         }
     }
 
