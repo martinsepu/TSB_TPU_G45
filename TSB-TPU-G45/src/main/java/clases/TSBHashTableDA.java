@@ -62,20 +62,39 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
         int id = h(key);
         int sum = 0;
         V old = null;
-        while(table[(id + sum*sum)% table.length] != null){
-            if(table[(id + sum*sum)% table.length].getKey() == key){
-                old = table[(id + sum*sum)% table.length].getValue();
-                codigoHash -= table[(id + sum*sum)% table.length].hashCode();
-                cantidad--;
-                break;
+        boolean encontre_espacio=false,piso=false;
+        int lugar_espacio=0;
+        int posicion_actual;
+        do {
+            posicion_actual=(id+sum*sum)%table.length;
+            if (table[posicion_actual]!=null && table[posicion_actual].getKey()==key){
+                piso=true;
+            }
+            if (table[posicion_actual]!=null && table[posicion_actual].isBorrado() && !encontre_espacio){
+                encontre_espacio=true;
+                lugar_espacio=posicion_actual;
             }
             sum++;
+        }while (table[posicion_actual]!=null && !piso);
+        if (piso){
+            old=table[posicion_actual].getValue();
+            codigoHash-=table[posicion_actual].hashCode();
+            table[posicion_actual].setValue(value);
+            codigoHash+=table[posicion_actual].hashCode();
+            return old;
         }
+        if (encontre_espacio){
+            old=null;
+            table[lugar_espacio] = new Entry<>(key, value);
+            codigoHash+=table[lugar_espacio].hashCode();
+            cantidad++;
+            return old;
+        }
+        table[posicion_actual] = new Entry<>(key, value);
+        codigoHash+=table[posicion_actual].hashCode();
         cantidad++;
-        table[(id + sum*sum)% table.length] = new Entry<>(key, value);
-        codigoHash += table[(id + sum*sum)% table.length].hashCode();
-        if(cantidad > load_factor * table.length) rehash();
         return old;
+
     }
 
 
