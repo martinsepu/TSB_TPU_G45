@@ -1,4 +1,4 @@
-package clases;
+package tests;
 
 import clases.TSBHashTableDA;
 import org.junit.Before;
@@ -256,7 +256,7 @@ public class TSBHashTableDATest {
     }
 
     @Test
-    public void testClone() {
+    public void testClone(){
         addTestData();
         TSBHashTableDA<String, Integer> other = (TSBHashTableDA<String, Integer>) table.clone();
         assertEquals(table, other);
