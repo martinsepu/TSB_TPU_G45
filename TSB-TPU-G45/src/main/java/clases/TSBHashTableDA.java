@@ -174,6 +174,9 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
         }
     }
 
+    /**
+     * Aumenta la longitud de la tabla reubicando los elementos que se encontraban efectivamente en ella
+     */
     protected void rehash(){
         int longitud_previa=this.table.length;
         int cantidad_previa = this.size();
@@ -238,7 +241,11 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
         return !noEncontre;
     }
 
-
+    /**
+     * Permite obtener el value al cual está asociado una key si esta existe.
+     * @param key la key de la cual se quiere obtener el valor
+     * @return el valor al que está asociado la key
+     */
     public V get(Object key) {
         int clave = h((K) key);
         int i = 0;
@@ -334,18 +341,37 @@ public class TSBHashTableDA<K,V> extends AbstractMap<K,V> implements Cloneable {
     }
 
     /**
-     * calculo de la clave de hash de una key
-     * @param k
-     * @return el nuemero entero obtenido al realizarle la funcioon hash a la clave
+     * calculo de la clave hash del objeto Entry a partir de el hashcode de la clave ingresada
+     * @param k hashcode de la clave ingresada
+     * @return clave hash del objeto Entryve
      */
     private int h(int k){return h(k, this.table.length);}
+
+    /**
+     * calculo de la clave hash del objeto Entry a partir de la clave ingresada
+     * @param key clave ingresada del objeto
+     * @return clave hash del objeto Entry
+     */
     private int h(K key){return h(key.hashCode(), this.table.length);}
+
+    /**
+     * calculo de la clave hash del objeto Entry
+     * @param key clave ingresada del objeto
+     * @param t longitud de la tabla
+     * @return clave hash del objeto Entry
+     */
     private int h(K key, int t){return h(key.hashCode(),t);}
+
     private int h(int k, int t){
         if(k < 0) k *=-1;
         return k %t;
     }
 
+
+    /**
+     * convierte los elementos de la tabla en string asignando un formato para que sea legible
+     * @return la tabla en formato String
+     */
     @Override
     public String toString() {
         StringBuilder s = new StringBuilder("{");
